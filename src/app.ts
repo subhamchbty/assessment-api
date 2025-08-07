@@ -1,9 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import swaggerUi from 'swagger-ui-express';
 import { config } from './config/config';
-import { swaggerSpec } from './config/swagger';
 import { AssessmentRoutes } from './routes/assessment.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
@@ -16,22 +14,12 @@ export class App {
     this.app = express();
     this.assessmentRoutes = new AssessmentRoutes();
     this.initializeMiddleware();
-    this.initializeSwagger();
     this.initializeRoutes();
     this.initializeErrorHandling();
   }
 
   private initializeMiddleware(): void {
-    this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "data:", "https:"],
-        },
-      },
-    }));
+    this.app.use(helmet());
     this.app.use(cors());
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
@@ -42,38 +30,7 @@ export class App {
     });
   }
 
-  private initializeSwagger(): void {
-    this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-      customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'Assessment API Documentation',
-    }));
-  }
-
   private initializeRoutes(): void {
-    /**
-     * @swagger
-     * /health:
-     *   get:
-     *     summary: Health check endpoint
-     *     tags: [System]
-     *     responses:
-     *       200:
-     *         description: API is running
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: object
-     *               properties:
-     *                 success:
-     *                   type: boolean
-     *                   example: true
-     *                 message:
-     *                   type: string
-     *                   example: API is running
-     *                 timestamp:
-     *                   type: string
-     *                   format: date-time
-     */
     this.app.get('/health', (_req: Request, res: Response) => {
       res.status(200).json({
         success: true,
@@ -82,14 +39,6 @@ export class App {
       });
     });
 
-    /**
-     * @swagger
-     * tags:
-     *   - name: Assessments
-     *     description: Assessment management endpoints
-     *   - name: System
-     *     description: System health and monitoring endpoints
-     */
     this.app.use(
       `${config.apiPrefix}/assessments`,
       this.assessmentRoutes.getRouter()
@@ -115,7 +64,6 @@ export class App {
     this.app.listen(config.port, () => {
       logger.info(`Server is running on port ${config.port}`);
       logger.info(`Environment: ${config.nodeEnv}`);
-      logger.info(`API Documentation: http://localhost:${config.port}/api-docs`);
     });
   }
 }
